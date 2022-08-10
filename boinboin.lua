@@ -2,34 +2,34 @@
   BoinBoin: mathematically accurate bouncing ball
 ]]
 
--- debug stuff
-local debugMode = false
-local fpBallColors = {
-  ['normal']      = {0,   0.6, 0}, -- green
-  ['off-limits']  = {1,   0,   0}, -- red
-  ['corrected']   = {1,   1,   0}, -- yellow
-  ['has-bounced'] = {0,   0.7, 1}, -- blue
-}
-local debugInfo = {
-  fpBalls = {},
-  fpLines = {}
-}
-
 -- normal stuff
-local bb = {}
+local bb = {
+  debugMode = false,
+  fpBallColors = { -- FP = Footprint
+    ['normal']      = {0,   0.6, 0}, -- green
+    ['off-limits']  = {1,   0,   0}, -- red
+    ['corrected']   = {1,   1,   0}, -- yellow
+    ['has-bounced'] = {0,   0.7, 1}, -- blue
+  },
+  debugInfo = {
+    fpBalls = {},
+    fpLines = {}
+  }
+}
 local defaultBallSpeed = 300 -- pixels/s
 
 local addFpBall = function(x, y, r, t) -- x, y, radius, type
-  if not debugMode then return end
+  if not bb.debugMode then return end
 
   local data = {
     x = x,
     y = y,
     r = r,
     t = t,
-    color = fpBallColors[t]
+    color = bb.fpBallColors[t],
+    lifespan = 1
   }
-  table.insert(debugInfo.fpBalls, data)
+  table.insert(bb.debugInfo.fpBalls, data)
 end
 
 local function getIntersection(p1, p2, p3, p4)
@@ -63,7 +63,7 @@ local function calculateReboundProjection(direction, newX, newY, ball)
     ball.vv = -ball.vv
   end
 
-  return ball.x, ball.y
+  return ball.x, ball.y, ball.r, 'has-bounced'
 end
 
 local function getPairOfLines(ball, offsetX1, offsetY1, offsetX2, offsetY2)
@@ -82,15 +82,57 @@ end
 
 -- more debug
 
+local checkForLeft = function (ball)
+  local bx = ball.box
+  if ball:isBeyondLeft() then
+    local newX, newY = getIntersection(getPairOfLines(ball, ball.r, 0, ball.r, bx.h))
+    addFpBall(newX, newY, ball.r, 'corrected')
+    addFpBall(calculateReboundProjection('left', newX, newY, ball))
+  end
+end
+
+local checkForRight = function (ball)
+  local bx = ball.box
+  if ball:isBeyondRight() then
+    local newX, newY = getIntersection(getPairOfLines(ball, bx.w - ball.r, 0, bx.w - ball.r, bx.h))
+    addFpBall(newX, newY, ball.r, 'corrected')
+    addFpBall(calculateReboundProjection('right', newX, newY, ball))
+  end
+end
+
+local checkForTop = function (ball)
+  local bx = ball.box
+  if ball:isBeyondTop() then
+    local newX, newY = getIntersection(getPairOfLines(ball, 0, ball.r, bx.w, ball.r))
+    addFpBall(newX, newY, ball.r, 'corrected')
+    addFpBall(calculateReboundProjection('top', newX, newY, ball))
+  end
+end
+
+local checkForBottom = function (ball)
+  local bx = ball.box
+  if ball:isBeyondBottom() then
+    local newX, newY = getIntersection(getPairOfLines(ball, 0, bx.h - ball.r, bx.w, bx.h - ball.r))
+    addFpBall(newX, newY, ball.r, 'corrected')
+    addFpBall(calculateReboundProjection('bottom', newX, newY, ball))
+  end
+end
+
 bb.debug = function ()
-  debugMode = true
+  bb.debugMode = true
 end
 
 bb.drawDebug = function ()
-  for i = 1, #debugInfo.fpBalls do
-    local ball = debugInfo.fpBalls[i]
-    love.graphics.setColor(ball.color)
-    love.graphics.circle('line', ball.x, ball.y, ball.r)
+  for i = 1, #bb.debugInfo.fpBalls do
+    local ball = bb.debugInfo.fpBalls[i]
+    love.graphics.setColor(ball.color[1], ball.color[2], ball.color[3], ball.lifespan)
+    love.graphics.circle(
+      'line',
+      math.floor(ball.x),
+      math.floor(ball.y),
+      ball.r,
+      64
+    )
   end
 end
 -- end of debug
@@ -168,33 +210,21 @@ bb.updateBall = function (ball, deltaTime, cb)
     --addFpBall(ball.x, ball.y, ball.r, 'normal')
   end
 
-  local bx = ball.box
-  if ball:isBeyondLeft() then
-    local newX, newY = getIntersection(getPairOfLines(ball, ball.r, 0, ball.r, bx.h))
-    addFpBall(newX, newY, ball.r, 'corrected')
-    local cx, cy = calculateReboundProjection('left', newX, newY, ball)
-    addFpBall(cx, cy, ball.r, 'has-bounced')
-  end
+  checkForLeft(ball)
+  checkForRight(ball)
+  checkForTop(ball)
+  checkForBottom(ball)
 
-  if ball:isBeyondRight() then
-    local newX, newY = getIntersection(getPairOfLines(ball, bx.w - ball.r, 0, bx.w - ball.r, bx.h))
-    addFpBall(newX, newY, ball.r, 'corrected')
-    local cx, cy = calculateReboundProjection('right', newX, newY, ball)
-    addFpBall(cx, cy, ball.r, 'has-bounced')
-  end
+  -- update debug info
+  if bb.debugMode then
+    for i = #bb.debugInfo.fpBalls, 1, -1 do
+      local ball = bb.debugInfo.fpBalls[i]
+      ball.lifespan = ball.lifespan - deltaTime
 
-  if ball:isBeyondTop() then
-    local newX, newY = getIntersection(getPairOfLines(ball, 0, ball.r, bx.w, ball.r))
-    addFpBall(newX, newY, ball.r, 'corrected')
-    local cx, cy = calculateReboundProjection('top', newX, newY, ball)
-    addFpBall(cx, cy, ball.r, 'has-bounced')
-  end
-
-  if ball:isBeyondBottom() then
-    local newX, newY = getIntersection(getPairOfLines(ball, 0, bx.h - ball.r, bx.w, bx.h - ball.r))
-    addFpBall(newX, newY, ball.r, 'corrected')
-    local cx, cy = calculateReboundProjection('bottom', newX, newY, ball)
-    addFpBall(cx, cy, ball.r, 'has-bounced')
+      if ball.lifespan <= 0 then
+        table.remove(bb.debugInfo.fpBalls, i)
+      end
+    end
   end
 end
 

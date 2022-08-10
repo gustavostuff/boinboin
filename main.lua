@@ -1,11 +1,12 @@
 local bb = require 'boinboin'
 
--- debug
-local function sleep(n)
-  os.execute('sleep ' .. tonumber(n))
-end
-
 function love.load()
+  font = love.graphics.newFont('fonts/ProggyCleanCE.ttf', 16)
+  font:setFilter('nearest', 'nearest')
+  love.graphics.setFont(font)
+  love.graphics.setLineWidth(2)
+  ballImg = love.graphics.newImage('img/ball.png')
+
   bb.debug()
   box = bb.newBox({
     x = 200,
@@ -16,12 +17,12 @@ function love.load()
     h = 400
   })
   ball = bb.newBall({
-    r = 15,
-    x = 50,
+    r = 16,
+    x = 30,
     y = 20,
     box = box,
-    hv = 2600,
-    vv = 2600
+    hv = 6500,
+    vv = 6500
   })
 
   ballStatus = 'ok'
@@ -29,25 +30,28 @@ function love.load()
 end
 
 function love.update(dt)
-  bb.updateBall(ball, dt, function (evt)
-    if evt.type == 'rebound' then
-      numberOfBounces = numberOfBounces + 1
-    elseif evt.type == 'stray' then
-      ballStatus = 'stray'
-    end
-  end)
+  -- if love.keyboard.isDown('space') then
+    bb.updateBall(ball, dt, function (evt)
+      if evt.type == 'rebound' then
+        numberOfBounces = numberOfBounces + 1
+      elseif evt.type == 'stray' then
+        ballStatus = 'stray'
+      end
+    end)
+  -- end
 end
 
 function love.draw()
   bb.drawDebug()
   love.graphics.setColor(1, 1, 1)
-  love.graphics.circle('line', ball.x, ball.y, ball.r - 2)
+  love.graphics.draw(ballImg, ball.x, ball.y, 0, 1, 1, ballImg:getWidth() / 2, ballImg:getHeight() / 2)
 
   local debugText = 'FPS: ' .. love.timer.getFPS() ..
-    '\nLeft and Right to change horizonal velocity: ' .. ball.hv ..
-    '\nUp and down to change vertical velovity: ' .. ball.vv ..
+    '\nHorizonal velocity: ' .. (ball.hv > 0 and ' ' or '') .. ball.hv ..
+    '\nVertical velovity: ' .. (ball.vv > 0 and ' ' or '') .. ball.vv ..
     '\nBall status: ' .. ballStatus ..
-    '\nNumber of bounces: ' .. numberOfBounces
+    '\nNumber of bounces: ' .. numberOfBounces ..
+    '\nDebug balls:' .. #bb.debugInfo.fpBalls
 
   love.graphics.setColor(0, 0, 0)
   love.graphics.print(debugText, 10, 10)

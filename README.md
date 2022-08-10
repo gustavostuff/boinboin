@@ -2,7 +2,7 @@
 
 ### Mathematically accurate bouncing ball (WIP)
 
-BoinBoin is a small library to handle a mathematically (not physically) accurate bouncing ball (or balls) inside a closed box. This can be used as a base for a variety of games or prototypes.
+BoinBoin is a small library to handle a mathematically (not physically) accurate bouncing ball (or balls) inside a closed box. This can be used as a base for a variety of games or prototypes. There are plans to port this to JS.
 
 ![](https://i.postimg.cc/NM7xZS7q/boinboin-square-bounce-optimized-2.gif)
 

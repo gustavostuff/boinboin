@@ -51,7 +51,7 @@ function love.draw()
     '\nVertical velovity: ' .. (ball.vv > 0 and ' ' or '') .. ball.vv ..
     '\nBall status: ' .. ballStatus ..
     '\nNumber of bounces: ' .. numberOfBounces ..
-    '\nDebug balls:' .. #bb.debugInfo.fpBalls
+    '\nDebug balls: ' .. #bb.debugInfo.fpBalls
 
   love.graphics.setColor(0, 0, 0)
   love.graphics.print(debugText, 10, 10)

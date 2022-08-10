@@ -8,8 +8,6 @@ BoinBoin is a small library to handle a mathematically (not physically) accurate
 
 ![Loading example 2...](https://raw.githubusercontent.com/tavuntu/boinboin/main/img/example_2.gif)
 
-:white_circle: Current position of the ball 
-
 :red_circle: Offlimits position that needs correction
 
 :yellow_circle: Virtual bouncing point

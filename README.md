@@ -2,7 +2,7 @@
 
 ### Mathematically accurate bouncing ball (WIP)
 
-BoinBoin is Lua/LÖVE Library to handle a mathematically (not physically) accurate bouncing ball(s) inside a closed box. This can be used as a base for a variety of games or prototypes. There are plans to port this to JS.
+BoinBoin is a Lua Library to handle a mathematically (not physically) accurate bouncing ball(s) inside a closed, rectangular box. This can be used as a base for a variety of games or prototypes. There are plans to port this to JS.
 
 ![Loading example 1...](https://raw.githubusercontent.com/tavuntu/boinboin/main/img/example_1.gif)
 

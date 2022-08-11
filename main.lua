@@ -5,24 +5,25 @@ function love.load()
   font:setFilter('nearest', 'nearest')
   love.graphics.setFont(font)
   love.graphics.setLineWidth(2)
+  love.graphics.setLineStyle('rough')
   ballImg = love.graphics.newImage('img/ball.png')
 
-  bb.debug()
+  bb.debug({
+    lifespan = 3
+  })
   box = bb.newBox({
-    x = 200,
+    x = 230,
     y = 100,
-    -- w = love.graphics.getWidth() - 200,
-    -- h = love.graphics.getHeight() - 200,
-    w = 400,
-    h = 400
+    w = 400 ,
+    h = 300
   })
   ball = bb.newBall({
+    x = 20,
+    y = 40,
     r = 16,
-    x = 30,
-    y = 20,
     box = box,
-    hv = 6500,
-    vv = 6500
+    hv = 3600,
+    vv = 3500
   })
 
   ballStatus = 'ok'
@@ -30,7 +31,7 @@ function love.load()
 end
 
 function love.update(dt)
-  -- if love.keyboard.isDown('space') then
+  if love.keyboard.isDown('space') then
     bb.updateBall(ball, dt, function (evt)
       if evt.type == 'rebound' then
         numberOfBounces = numberOfBounces + 1
@@ -38,28 +39,36 @@ function love.update(dt)
         ballStatus = 'stray'
       end
     end)
-  -- end
+  end
 end
 
 function love.draw()
-  bb.drawDebug()
   love.graphics.setColor(1, 1, 1)
-  love.graphics.draw(ballImg, ball.x, ball.y, 0, 1, 1, ballImg:getWidth() / 2, ballImg:getHeight() / 2)
+  love.graphics.draw(
+    ballImg,
+    math.floor(ball.x),
+    math.floor(ball.y), 0, 0.9, 0.9,
+    math.floor(ballImg:getWidth() / 2),
+    math.floor(ballImg:getHeight() / 2)
+  )
+  
+  love.graphics.setColor(1, 1, 1)
+  love.graphics.rectangle('line', box.x, box.y, box.w, box.h)
+  bb.drawDebug()
 
   local debugText = 'FPS: ' .. love.timer.getFPS() ..
     '\nHorizonal velocity: ' .. (ball.hv > 0 and ' ' or '') .. ball.hv ..
     '\nVertical velovity: ' .. (ball.vv > 0 and ' ' or '') .. ball.vv ..
     '\nBall status: ' .. ballStatus ..
     '\nNumber of bounces: ' .. numberOfBounces ..
-    '\nDebug balls: ' .. #bb.debugInfo.fpBalls
-
+    '\nDebug balls: ' .. #bb.debugInfo.fpBalls ..
+    -- '\nDebug lines: ' .. #bb.debugInfo.fpLines ..
+    '\nPress space to move' ..
+    '\nN = next iteration'
   love.graphics.setColor(0, 0, 0)
   love.graphics.print(debugText, 10, 10)
   love.graphics.setColor(1, 1, 1)
   love.graphics.print(debugText, 11, 9)
-
-  love.graphics.setColor(1, 1, 1)
-  love.graphics.rectangle('line', box.x, box.y, box.w, box.h)
 end
 
 function love.keypressed(k)

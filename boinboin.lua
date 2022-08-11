@@ -2,6 +2,21 @@
   BoinBoin: mathematically accurate bouncing ball
 ]]
 
+--[[
+
+
+
+
+
+previousX and Y seem to be the problem, they need to be set twice per iteration
+
+
+
+
+
+
+]]
+
 -- normal stuff
 local bb = {
   debugMode = false,
@@ -13,12 +28,13 @@ local bb = {
   },
   debugInfo = {
     fpBalls = {},
-    fpLines = {}
+    fpLines = {},
+    lifespan = 1
   }
 }
 local defaultBallSpeed = 300 -- pixels/s
 
-local addFpBall = function(x, y, r, t) -- x, y, radius, type
+local addFpBall = function (x, y, r, t) -- x, y, radius, type
   if not bb.debugMode then return end
 
   local data = {
@@ -27,9 +43,24 @@ local addFpBall = function(x, y, r, t) -- x, y, radius, type
     r = r,
     t = t,
     color = bb.fpBallColors[t],
-    lifespan = 1
+    lifespan = bb.debugInfo.lifespan,
+    --id = (bb.debugInfo.fpBalls[#bb.debugInfo.fpBalls] or {id = 0}).id + 1
   }
   table.insert(bb.debugInfo.fpBalls, data)
+end
+
+local addFpLine = function (x, y, x2, y2)
+  if not bb.debugMode then return end
+
+  local data = {
+    x = x,
+    y = y,
+    x2 = x2,
+    y2 = y2,
+    color = {1, 0, 0},
+    lifespan = 3
+  }
+  table.insert(bb.debugInfo.fpLines, data)
 end
 
 local function getIntersection(p1, p2, p3, p4)
@@ -63,7 +94,10 @@ local function calculateReboundProjection(direction, newX, newY, ball)
     ball.vv = -ball.vv
   end
 
-  return ball.x, ball.y, ball.r, 'has-bounced'
+  return ball.x,
+         ball.y,
+         ball.r,
+         ball:isBeyondBox() and 'off-limits' or 'has-bounced'
 end
 
 local function getPairOfLines(ball, offsetX1, offsetY1, offsetX2, offsetY2)
@@ -82,56 +116,78 @@ end
 
 -- more debug
 
-local checkForLeft = function (ball)
+local checkForLeft = function (ball, cornerCheck)
   local bx = ball.box
   if ball:isBeyondLeft() then
     local newX, newY = getIntersection(getPairOfLines(ball, ball.r, 0, ball.r, bx.h))
     addFpBall(newX, newY, ball.r, 'corrected')
+    ball.previousX, ball.previousY = newX, newY
     addFpBall(calculateReboundProjection('left', newX, newY, ball))
   end
 end
 
-local checkForRight = function (ball)
+local checkForRight = function (ball, cornerCheck)
   local bx = ball.box
   if ball:isBeyondRight() then
     local newX, newY = getIntersection(getPairOfLines(ball, bx.w - ball.r, 0, bx.w - ball.r, bx.h))
     addFpBall(newX, newY, ball.r, 'corrected')
+    ball.previousX, ball.previousY = newX, newY
     addFpBall(calculateReboundProjection('right', newX, newY, ball))
   end
 end
 
-local checkForTop = function (ball)
+local checkForTop = function (ball, cornerCheck)
   local bx = ball.box
   if ball:isBeyondTop() then
     local newX, newY = getIntersection(getPairOfLines(ball, 0, ball.r, bx.w, ball.r))
     addFpBall(newX, newY, ball.r, 'corrected')
+    ball.previousX, ball.previousY = newX, newY
     addFpBall(calculateReboundProjection('top', newX, newY, ball))
   end
 end
 
-local checkForBottom = function (ball)
+local checkForBottom = function (ball, cornerCheck)
   local bx = ball.box
   if ball:isBeyondBottom() then
     local newX, newY = getIntersection(getPairOfLines(ball, 0, bx.h - ball.r, bx.w, bx.h - ball.r))
     addFpBall(newX, newY, ball.r, 'corrected')
+    ball.previousX, ball.previousY = newX, newY
     addFpBall(calculateReboundProjection('bottom', newX, newY, ball))
   end
 end
 
-bb.debug = function ()
+bb.debug = function (options)
+  options = options or {}
+
   bb.debugMode = true
+
+  bb.debugInfo.lifespan = options.lifespan or bb.debugInfo.lifespan
 end
 
 bb.drawDebug = function ()
+  if not bb.debugMode then return end
+
   for i = 1, #bb.debugInfo.fpBalls do
     local ball = bb.debugInfo.fpBalls[i]
-    love.graphics.setColor(ball.color[1], ball.color[2], ball.color[3], ball.lifespan)
-    love.graphics.circle(
-      'line',
-      math.floor(ball.x),
-      math.floor(ball.y),
-      ball.r,
-      64
+    -- love.graphics.setColor(ball.color[1], ball.color[2], ball.color[3], ball.lifespan)
+    love.graphics.setColor(ball.color)
+    love.graphics.circle('line', ball.x, ball.y, ball.r, 64)
+    -- love.graphics.print(
+    --   tostring(ball.id),
+    --   math.floor(ball.x - font:getWidth(tostring(ball.id)) / 2),
+    --   math.floor(ball.y - font:getHeight() / 2)
+    -- )
+  end
+
+  for i = 1, #bb.debugInfo.fpLines do
+    local line = bb.debugInfo.fpLines[i]
+    -- love.graphics.setColor(line.color[1], line.color[2], line.color[3], line.lifespan)
+    love.graphics.setColor(line.color)
+    love.graphics.line(
+      math.floor(line.x),
+      math.floor(line.y),
+      math.floor(line.x2),
+      math.floor(line.y2)
     )
   end
 end
@@ -162,6 +218,8 @@ bb.newBall = function (data)
     vv = data.vv or -defaultBallSpeed, -- vertical velocity
   }
 
+  -- boncing far from corners
+
   function ball:isBeyondLeft()
     return (self.x - self.r) < self.box.x
   end
@@ -177,6 +235,77 @@ bb.newBall = function (data)
   function ball:isBeyondBottom()
     return (self.y + self.r) > (self.box.y + self.box.h)
   end
+
+  -- bouncing close to corners
+
+  function ball:isInTopLeftQuadrant()
+    return self:isBeyondTop() and self:isBeyondLeft()
+  end
+
+  function ball:isInTopRightQuadrant()
+    return self:isBeyondTop() and self:isBeyondRight()
+  end
+
+  function ball:isInBottomLeftQuadrant()
+    return self:isBeyondBottom() and self:isBeyondLeft()
+  end
+
+  function ball:isInBottomRightQuadrant()
+    return self:isBeyondBottom() and self:isBeyondRight()
+  end
+
+  -- check where it bounced first when close to a corner (check 2 sides)
+
+  --  O
+  -- 
+  --    ┌─O────────
+  --    │
+  --    │     O
+  --    │ 
+  --    │
+  function ball:bouncedTopCloseToLeft()
+    return self:isInTopLeftQuadrant() and
+      (self.y - self.box.y) < (self.x - self.box.x)
+  end
+
+  function ball:bouncedLeftCloseToTop()
+    return self:isInTopLeftQuadrant() and
+      (self.y - self.box.y) >= (self.x - self.box.x)
+  end
+
+  function ball:bouncedTopCloseToRight()
+    return self:isInTopRightQuadrant() and
+      (self.y - self.box.y) < ((self.box.x + self.box.w) - self.x)
+  end
+
+  function ball:bouncedRightCloseToTop()
+    return self:isInTopRightQuadrant() and
+     (self.y - self.box.y) >= ((self.box.x + self.box.w) - self.x)
+  end
+
+  ---------
+
+  function ball:bouncedBottomCloseToLeft()
+    return self:isInBottomLeftQuadrant() and
+      ((self.box.y + self.box.h) - self.y) < (self.x - self.box.x)
+  end
+
+  function ball:bouncedLeftCloseToBottom()
+    return self:isInBottomLeftQuadrant() and
+      ((self.box.y + self.box.h) - self.y) >= (self.x - self.box.x)
+  end
+
+  function ball:bouncedBottomCloseToRight()
+    return self:isInBottomRightQuadrant() and
+      ((self.box.y + self.box.h) - self.y) < ((self.box.x + self.box.w) - self.x)
+  end
+
+  function ball:bouncedRightCloseToBottom()
+    return self:isInBottomRightQuadrant() and
+      ((self.box.y + self.box.h) - self.y) >= ((self.box.x + self.box.w) - self.x)
+  end
+
+  -- utility method
 
   function ball:isBeyondBox()
     return self:isBeyondLeft() or
@@ -203,17 +332,52 @@ bb.updateBall = function (ball, deltaTime, cb)
   -- gravity (WIP)
   -- ball.y = ball.y + 200 * deltaTime
 
+  if #bb.debugInfo.fpLines == 0 then
+    addFpLine(ball.x, ball.y, ball.x, ball.y)
+  end
+  
   if ball:isBeyondBox() then
     cb({ type = 'rebound' })
     addFpBall(ball.x, ball.y, ball.r, 'off-limits')
+    if #bb.debugInfo.fpLines > 1 then
+      local lines = bb.debugInfo.fpLines
+      addFpLine(ball.x, ball.y, lines[#lines - 1].x2, lines[#lines - 1].y2)
+    end
   else
     --addFpBall(ball.x, ball.y, ball.r, 'normal')
   end
 
-  checkForLeft(ball)
-  checkForRight(ball)
-  checkForTop(ball)
-  checkForBottom(ball)
+  if ball:bouncedLeftCloseToTop() then
+    checkForLeft(ball)
+    checkForTop(ball)
+  elseif ball:bouncedTopCloseToLeft() then
+    checkForTop(ball)
+    checkForLeft(ball)
+  elseif ball:bouncedRightCloseToTop() then
+    checkForRight(ball)
+    checkForTop(ball)
+  elseif ball:bouncedTopCloseToRight() then
+    checkForTop(ball)
+    checkForRight(ball)
+  elseif ball:bouncedBottomCloseToLeft() then
+    checkForBottom(ball)
+    checkForLeft(ball)
+  elseif ball:bouncedLeftCloseToBottom() then
+    checkForLeft(ball)
+    checkForBottom(ball)
+  elseif ball:bouncedBottomCloseToRight() then
+    checkForBottom(ball)
+    checkForRight(ball)
+  elseif ball:bouncedRightCloseToBottom() then
+    checkForRight(ball)
+    checkForBottom(ball)
+  else -- bounced far from a corner:
+    checkForLeft(ball)
+    checkForRight(ball)
+    checkForTop(ball)
+    checkForBottom(ball)
+  end
+
 
   -- update debug info
   if bb.debugMode then
@@ -223,6 +387,14 @@ bb.updateBall = function (ball, deltaTime, cb)
 
       if ball.lifespan <= 0 then
         table.remove(bb.debugInfo.fpBalls, i)
+      end
+    end
+    for i = #bb.debugInfo.fpLines, 1, -1 do
+      local line = bb.debugInfo.fpLines[i]
+      line.lifespan = line.lifespan - deltaTime
+
+      if line.lifespan <= 0 then
+        table.remove(bb.debugInfo.fpLines, i)
       end
     end
   end

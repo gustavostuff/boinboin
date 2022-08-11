@@ -1,23 +1,8 @@
 --[[
   BoinBoin: mathematically accurate bouncing ball
+  MIT Licensed: https://github.com/tavuntu/boinboin/blob/master/LICENSE.md
 ]]
 
---[[
-
-
-
-
-
-previousX and Y seem to be the problem, they need to be set twice per iteration
-
-
-
-
-
-
-]]
-
--- normal stuff
 local bb = {
   debugMode = false,
   fpBallColors = { -- FP = Footprint
@@ -107,15 +92,6 @@ local function getPairOfLines(ball, offsetX1, offsetY1, offsetX2, offsetY2)
          { x = ball.previousX,        y = ball.previousY        }
 end
 
--- local function getDistanceBetweenPoints(p1, p2)
---   local dx = p2.x - p1.x
---   local dy = p2.y - p1.y
-
---   return math.sqrt(math.pow(dx, 2) + math.pow(dy, 2))
--- end
-
--- more debug
-
 local checkForLeft = function (ball, cornerCheck)
   local bx = ball.box
   if ball:isBeyondLeft() then
@@ -172,11 +148,6 @@ bb.drawDebug = function ()
     -- love.graphics.setColor(ball.color[1], ball.color[2], ball.color[3], ball.lifespan)
     love.graphics.setColor(ball.color)
     love.graphics.circle('line', ball.x, ball.y, ball.r, 64)
-    -- love.graphics.print(
-    --   tostring(ball.id),
-    --   math.floor(ball.x - font:getWidth(tostring(ball.id)) / 2),
-    --   math.floor(ball.y - font:getHeight() / 2)
-    -- )
   end
 
   for i = 1, #bb.debugInfo.fpLines do
